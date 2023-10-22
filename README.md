@@ -1,5 +1,5 @@
 # Bowling
-[Bowling scoring][1] implementation.
+Traditional Bowling scoring (source: [Wikipedia][1]):
 
 In traditional scoring, one point is scored for each pin that is knocked over, and when fewer than all ten pins are knocked down in two rolls in a frame (an open frame), the frame is scored with the total number of pins knocked down.
 However, when all ten pins are knocked down with either the first or second rolls of a frame (a mark), bonus pins are awarded as follows:
