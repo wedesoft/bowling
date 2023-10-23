@@ -5,9 +5,10 @@
   {:score 0
    :pins 10
    :remaining-throws 2
-   :remaining-frames 9})
+   :remaining-frames 9
+   :score-increase (repeat 0)})
 
-(defn progress-frame [state]
+(defn detect-frame-end [state]
   (if (or (zero? (:remaining-throws state)) (zero? (:pins state)))
     (-> state
         (assoc :pins 10)
@@ -15,12 +16,29 @@
         (update :remaining-frames dec))
     state))
 
+(defn score-roll [state pins]
+  (-> state
+      (update :score + (* pins (inc (first (:score-increase state)))))
+      (update :score-increase (fn [lst] (drop 1 lst)))))
+
+(defn score-spare [state]
+  (if (zero? (:pins state))
+    (update state :score-increase (fn [lst] (cons (inc (first lst)) (rest lst))))
+    state))
+
+(defn score-strike [state]
+  (if (and (zero? (:pins state)) (>= (:remaining-throws state) 1))
+    (update state :score-increase (fn [lst] (cons (first lst) (cons (inc (second lst)) (drop 2 lst)))))
+    state))
+
 (defn ball [state pins]
   (-> state
       (update :pins - pins)
-      (update :score + pins)
       (update :remaining-throws dec)
-      progress-frame))
+      (score-roll pins)
+      score-spare
+      score-strike
+      detect-frame-end))
 
 (fact "Initial score is zero"
       (:score initial) => 0)
@@ -63,5 +81,10 @@
          (:remaining-throws state) => 2
          (:pins state) => 10))
 
-(fact "Score knocked down pins of next ball again after a spare (knocking down all pins with two balls of a frame)"
-      (:score (-> initial (ball 7) (ball 3) (ball 1))) => 12)
+(facts "Score knocked down pins of next ball again after a spare (knocking down all pins with two balls of a frame)"
+      (:score (-> initial (ball 7) (ball 3) (ball 1))) => 12
+      (:score (-> initial (ball 7) (ball 3) (ball 1) (ball 2))) => 14)
+
+(facts "Score knocked down pins of next two balls after a strike (knocking down all pins with first ball of a frame)"
+      (:score (-> initial (ball 10) (ball 3) (ball 1))) => 18
+      (:score (-> initial (ball 10) (ball 3) (ball 1) (ball 2))) => 20)
