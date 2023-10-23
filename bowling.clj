@@ -4,21 +4,13 @@
 (def initial
   {:score 0
    :pins 10
-   :remaining-throws 2
-   :remaining-frames 9
+   :throws 0
+   :frames 0
    :score-increase (repeat 0)})
-
-(defn detect-frame-end [state]
-  (if (or (zero? (:remaining-throws state)) (zero? (:pins state)))
-    (-> state
-        (assoc :pins 10)
-        (assoc :remaining-throws 2)
-        (update :remaining-frames dec))
-    state))
 
 (defn score-roll [state pins]
   (-> state
-      (update :score + (* pins (inc (first (:score-increase state)))))
+      (update :score + (* pins (-> state :score-increase first inc)))
       (update :score-increase (fn [lst] (drop 1 lst)))))
 
 (defn score-spare [state]
@@ -27,14 +19,22 @@
     state))
 
 (defn score-strike [state]
-  (if (and (zero? (:pins state)) (>= (:remaining-throws state) 1))
+  (if (and (zero? (:pins state)) (== (:throws state) 1))
     (update state :score-increase (fn [lst] (cons (first lst) (cons (inc (second lst)) (drop 2 lst)))))
+    state))
+
+(defn detect-frame-end [state]
+  (if (or (>= (:throws state) 2) (zero? (:pins state)))
+    (-> state
+        (assoc :pins 10)
+        (assoc :throws 0)
+        (update :frames inc))
     state))
 
 (defn ball [state pins]
   (-> state
       (update :pins - pins)
-      (update :remaining-throws dec)
+      (update :throws inc)
       (score-roll pins)
       score-spare
       score-strike
@@ -52,19 +52,19 @@
 (fact "Knock over three and then two pins"
       (:score (-> initial (ball 3) (ball 2))) => 5)
 
-(fact "Remaining throws of initial frame"
-      (:remaining-throws initial) => 2)
+(fact "Throws of initial frame"
+      (:throws initial) => 0)
 
-(fact "Remaining throws after throwing once"
-      (:remaining-throws (ball initial 3)) => 1)
+(fact "Throws after throwing once"
+      (:throws (ball initial 3)) => 1)
 
-(fact "Initial remaining frames"
-      (:remaining-frames initial) => 9)
+(fact "Initial frames"
+      (:frames initial) => 0)
 
 (facts "Start next frame after two throws"
        (let [state (-> initial (ball 3) (ball 2))]
-         (:remaining-frames state) => 8
-         (:remaining-throws state) => 2))
+         (:frames state) => 1
+         (:throws state) => 0))
 
 (facts "Initially ten pins are up"
        (:pins initial) => 10)
@@ -77,8 +77,8 @@
 
 (facts "Start next frame after a strike (knocking down all pins with first ball of a frame)"
        (let [state (-> initial (ball 10))]
-         (:remaining-frames state) => 8
-         (:remaining-throws state) => 2
+         (:frames state) => 1
+         (:throws state) => 0
          (:pins state) => 10))
 
 (facts "Score knocked down pins of next ball again after a spare (knocking down all pins with two balls of a frame)"
@@ -88,3 +88,14 @@
 (facts "Score knocked down pins of next two balls after a strike (knocking down all pins with first ball of a frame)"
       (:score (-> initial (ball 10) (ball 3) (ball 1))) => 18
       (:score (-> initial (ball 10) (ball 3) (ball 1) (ball 2))) => 20)
+
+(def last-frame
+  {:score 0
+   :pins 10
+   :throws 0
+   :frames 9
+   :score-increase (repeat 0)})
+
+; (fact "Extra ball for spare in last frame with reduced scoring"
+;       (:frames (-> last-frame (ball 5) (ball 5))) => 9
+;       (:throws (-> last-frame (ball 5) (ball 5))) => 2)
