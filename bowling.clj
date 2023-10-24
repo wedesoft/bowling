@@ -59,10 +59,10 @@
       score-strike
       detect-frame-end))
 
-; ---------- tests ----------
-
 (defn finished? [state]
   (>= (:frames state) 10))
+
+; ---------- tests ----------
 
 (fact "Initial score is zero"
       (:score initial) => 0)
