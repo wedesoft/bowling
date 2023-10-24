@@ -135,3 +135,6 @@
 (facts "Check if game has finished"
        (finished? {:frames 9}) => false
        (finished? {:frames 10}) => true)
+
+(fact "Test best score"
+      (:score (nth (iterate #(ball % 10) initial) 12)) => 300)
