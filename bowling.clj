@@ -6,25 +6,38 @@
    :pins 10
    :throws 0
    :frames 0
-   :score-multiplier (repeat 1)})
+   :score-multiplier (repeat 1)
+   :extend-frame false})
 
 (defn score-roll [state pins]
   (-> state
       (update :score + (* pins (-> state :score-multiplier first)))
       (update :score-multiplier (fn [lst] (drop 1 lst)))))
 
+(defn extend-frame-if-last [state]
+  (if (== (:frames state) 9)
+    (-> state
+        (assoc :extend-frame true)
+        (update :score-multiplier #(map dec %)))
+    state))
+
 (defn score-spare [state]
-  (if (zero? (:pins state))
-    (update state :score-multiplier (fn [lst] (cons (inc (first lst)) (rest lst))))
+  (if (and (zero? (:pins state)) (== (:throws state) 2))
+    (-> state
+        (update :score-multiplier (fn [lst] (cons (inc (first lst)) (rest lst))))
+        extend-frame-if-last)
     state))
 
 (defn score-strike [state]
   (if (and (zero? (:pins state)) (== (:throws state) 1))
-    (update state :score-multiplier (fn [lst] (cons (first lst) (cons (inc (second lst)) (drop 2 lst)))))
+    (-> state
+        (update :score-multiplier (fn [lst] (cons (inc (first lst)) (cons (inc (second lst)) (drop 2 lst)))))
+        extend-frame-if-last)
     state))
 
 (defn detect-frame-end [state]
-  (if (or (>= (:throws state) 2) (zero? (:pins state)))
+  (if (or (and (not (:extend-frame state)) (or (>= (:throws state) 2) (zero? (:pins state))))
+          (and (:extend-frame state) (>= (:throws state) 3)))
     (-> state
         (assoc :pins 10)
         (assoc :throws 0)
@@ -96,6 +109,14 @@
    :frames 9
    :score-multiplier (repeat 1)})
 
-(fact "Extra ball for spare in last frame with reduced scoring"
-      (:frames (-> last-frame (ball 5) (ball 5))) => 9
-      (:throws (-> last-frame (ball 5) (ball 5))) => 2)
+(facts "Extra ball for spare in last frame with reduced scoring"
+       (:frames (-> last-frame (ball 5) (ball 5))) => 9
+       (:throws (-> last-frame (ball 5) (ball 5))) => 2
+       (:frames (-> last-frame (ball 5) (ball 5) (ball 5))) => 10
+       (:score (-> last-frame (ball 5) (ball 5) (ball 5))) => 15)
+
+(facts "Extra ball for strike in last frame with reduced scoring"
+       (:frames (-> last-frame (ball 10))) => 9
+       (:throws (-> last-frame (ball 10))) => 1
+       (:frames (-> last-frame (ball 10) (ball 5) (ball 5))) => 10
+       (:score (-> last-frame (ball 10) (ball 5) (ball 5))) => 20)
