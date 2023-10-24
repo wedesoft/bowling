@@ -10,11 +10,13 @@
    :extend-frame false})
 
 (defn score-roll [state pins]
+  "Score roll taking into account score multiplier"
   (-> state
       (update :score + (* pins (-> state :score-multiplier first)))
       (update :score-multiplier (fn [lst] (drop 1 lst)))))
 
 (defn extend-frame-if-last [state]
+  "Set boolean to extend frame if it is the last one"
   (if (== (:frames state) 9)
     (-> state
         (assoc :extend-frame true)
