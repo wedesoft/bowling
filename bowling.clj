@@ -23,26 +23,45 @@
         (update :score-multiplier #(map dec %)))
     state))
 
+(defn all-pins-down? [state]
+  "Check if all pins are down"
+  (zero? (:pins state)))
+
+(defn all-pins-down-after-n-throws? [state n]
+  "Check if all pins are down and N balls where thrown in this frame"
+  (and (all-pins-down? state) (== (:throws state) n)))
+
+(defn increment-n-elements [lst n]
+  "Increment first N elements of the list LST"
+  (if (zero? n)
+    lst
+    (cons (inc (first lst)) (increment-n-elements (rest lst) (dec n)))))
+
 (defn score-spare [state]
   "Update scoring multipliers for a spare (knocking over 10 pins with two throws)"
-  (if (and (zero? (:pins state)) (== (:throws state) 2))
+  (if (all-pins-down-after-n-throws? state 2)
     (-> state
-        (update :score-multiplier (fn [lst] (cons (inc (first lst)) (rest lst))))
+        (update :score-multiplier #(increment-n-elements % 1))
         extend-frame-if-last)
     state))
 
 (defn score-strike [state]
   "Update scoring multipliers for a strike (knocking over 10 pins with one throw)"
-  (if (and (zero? (:pins state)) (== (:throws state) 1))
+  (if (all-pins-down-after-n-throws? state 1)
     (-> state
-        (update :score-multiplier (fn [lst] (cons (inc (first lst)) (cons (inc (second lst)) (drop 2 lst)))))
+        (update :score-multiplier #(increment-n-elements % 2))
         extend-frame-if-last)
     state))
 
-(defn detect-frame-end [state]
+(defn is-frame-end? [state]
+  "Check if current frame is finished"
+  (if (:extend-frame state)
+    (>= (:throws state) 3)
+    (or (>= (:throws state) 2) (all-pins-down? state))))
+
+(defn handle-frame-end [state]
   "Detect end of frame and begin new frame"
-  (if (or (and (not (:extend-frame state)) (or (>= (:throws state) 2) (zero? (:pins state))))
-          (and (:extend-frame state) (>= (:throws state) 3)))
+  (if (is-frame-end? state)
     (-> state
         (assoc :pins 10)
         (assoc :throws 0)
@@ -57,7 +76,7 @@
       (score-roll pins)
       score-spare
       score-strike
-      detect-frame-end))
+      handle-frame-end))
 
 (defn finished? [state]
   (>= (:frames state) 10))
