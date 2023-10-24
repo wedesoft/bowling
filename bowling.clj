@@ -6,21 +6,21 @@
    :pins 10
    :throws 0
    :frames 0
-   :score-increase (repeat 0)})
+   :score-multiplier (repeat 1)})
 
 (defn score-roll [state pins]
   (-> state
-      (update :score + (* pins (-> state :score-increase first inc)))
-      (update :score-increase (fn [lst] (drop 1 lst)))))
+      (update :score + (* pins (-> state :score-multiplier first)))
+      (update :score-multiplier (fn [lst] (drop 1 lst)))))
 
 (defn score-spare [state]
   (if (zero? (:pins state))
-    (update state :score-increase (fn [lst] (cons (inc (first lst)) (rest lst))))
+    (update state :score-multiplier (fn [lst] (cons (inc (first lst)) (rest lst))))
     state))
 
 (defn score-strike [state]
   (if (and (zero? (:pins state)) (== (:throws state) 1))
-    (update state :score-increase (fn [lst] (cons (first lst) (cons (inc (second lst)) (drop 2 lst)))))
+    (update state :score-multiplier (fn [lst] (cons (first lst) (cons (inc (second lst)) (drop 2 lst)))))
     state))
 
 (defn detect-frame-end [state]
@@ -94,8 +94,8 @@
    :pins 10
    :throws 0
    :frames 9
-   :score-increase (repeat 0)})
+   :score-multiplier (repeat 1)})
 
-; (fact "Extra ball for spare in last frame with reduced scoring"
-;       (:frames (-> last-frame (ball 5) (ball 5))) => 9
-;       (:throws (-> last-frame (ball 5) (ball 5))) => 2)
+(fact "Extra ball for spare in last frame with reduced scoring"
+      (:frames (-> last-frame (ball 5) (ball 5))) => 9
+      (:throws (-> last-frame (ball 5) (ball 5))) => 2)
