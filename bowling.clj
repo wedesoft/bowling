@@ -22,6 +22,7 @@
     state))
 
 (defn score-spare [state]
+  "Update scoring multipliers for a spare (knocking over 10 pins with two throws)"
   (if (and (zero? (:pins state)) (== (:throws state) 2))
     (-> state
         (update :score-multiplier (fn [lst] (cons (inc (first lst)) (rest lst))))
@@ -29,6 +30,7 @@
     state))
 
 (defn score-strike [state]
+  "Update scoring multipliers for a strike (knocking over 10 pins with one throw)"
   (if (and (zero? (:pins state)) (== (:throws state) 1))
     (-> state
         (update :score-multiplier (fn [lst] (cons (inc (first lst)) (cons (inc (second lst)) (drop 2 lst)))))
@@ -36,6 +38,7 @@
     state))
 
 (defn detect-frame-end [state]
+  "Detect end of frame and begin new frame"
   (if (or (and (not (:extend-frame state)) (or (>= (:throws state) 2) (zero? (:pins state))))
           (and (:extend-frame state) (>= (:throws state) 3)))
     (-> state
@@ -45,6 +48,7 @@
     state))
 
 (defn ball [state pins]
+  "Perform STATE changes for throwing a ball knocking over number of PINS"
   (-> state
       (update :pins - pins)
       (update :throws inc)
@@ -52,6 +56,11 @@
       score-spare
       score-strike
       detect-frame-end))
+
+; ---------- tests ----------
+
+(defn finished? [state]
+  (>= (:frames state) 10))
 
 (fact "Initial score is zero"
       (:score initial) => 0)
@@ -120,3 +129,7 @@
        (:throws (-> last-frame (ball 10))) => 1
        (:frames (-> last-frame (ball 10) (ball 5) (ball 5))) => 10
        (:score (-> last-frame (ball 10) (ball 5) (ball 5))) => 20)
+
+(facts "Check if game has finished"
+       (finished? {:frames 9}) => false
+       (finished? {:frames 10}) => true)
